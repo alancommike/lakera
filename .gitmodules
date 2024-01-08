@@ -1,0 +1,3 @@
+[submodule "nasdaq-listings"]
+	path = nasdaq-listings
+	url = https://github.com/datasets/nasdaq-listings.git
