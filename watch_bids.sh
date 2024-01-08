@@ -2,6 +2,6 @@
 
 while true; do
    clear
-   ./quotes.sh 
+   ./dump_orderbook.sh 
    sleep 1
 done

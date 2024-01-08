@@ -6,7 +6,7 @@
 ./clear_orderbook.sh | grep -q 200
 [ $? -eq 0 ] || echo "failed to clear"
 
-# buy with empty book, should get a 404
+# buy with empty book, should get a 404 since stock doesn't exist
 ./buy_order.sh aaa uid 1 1 | grep -q 404
 [ $? -eq 0 ] || echo "failed with empty book"
 
@@ -17,6 +17,7 @@
 ./buy_order.sh ccc uid 1 1 | grep -q 404
 [ $? -eq 0 ] || echo "failed with selling non-match"
 
+
 ./clear_orderbook.sh | grep -q 200
 [ $? -eq 0 ] || echo "failed to clear"
 
@@ -25,8 +26,23 @@
 [ $? -eq 0 ] || echo "failed sell add"
 ./buy_order.sh bbb uid 1 1 | grep -q 200
 [ $? -eq 0 ] || echo "failed with selling exact match"
-./dump_orderbook.sh  | grep -q '"bbb": \[\]'
+./dump_orderbook.sh  | grep -q '"sell": {}'
 [ $? -eq 0 ] || echo "failed removing an exact match buy from sell queue"
+
+
+./clear_orderbook.sh | grep -q 200
+[ $? -eq 0 ] || echo "failed to clear"
+
+# buy when there's no seller
+./add_sell.sh bbb uid 1 1 | grep -q 200
+[ $? -eq 0 ] || echo "failed sell add"
+./buy_order.sh bbb uid 1 1 | grep -q 200
+[ $? -eq 0 ] || echo "failed with selling exact match"
+./buy_order.sh bbb uid 1 1 | grep -q 202
+[ $? -eq 0 ] || echo "failed  selling without a buyer"
+./dump_orderbook.sh  | grep -q '"buy": {'
+[ $? -eq 0 ] || echo "failed adding to buy queue when no seller"
+
 
 
 ./clear_orderbook.sh | grep -q 200
@@ -39,7 +55,7 @@
 [ $? -eq 0 ] || echo "failed sell add"
 ./buy_order.sh bbb uid 1 20 | grep -q 200
 [ $? -eq 0 ] || echo "failed with buying multi-exact match"
-./dump_orderbook.sh  | grep -q '"bbb": \[\]'
+./dump_orderbook.sh  | grep -q '"sell": {}'
 [ $? -eq 0 ] || echo "failed removing an multi-exact match buy from sell queue"
 
 
@@ -61,11 +77,11 @@
 # buy more quantity than what the seller was selling
 ./add_sell.sh bbb uid 1 10 | grep -q 200
 [ $? -eq 0 ] || echo "failed buy add"
-./buy_order.sh bbb uid 1 17 | grep -q 404
+./buy_order.sh bbb uid 1 17 | grep -q 413
 [ $? -eq 0 ] || echo "failed with buying more quantity"
 ./dump_orderbook.sh  | grep -q '"quantity": 7'
 [ $? -eq 0 ] || echo "failed adding back to buy queue for remainder"
-./dump_orderbook.sh  | grep -q '"bbb": \[\]'
+./dump_orderbook.sh  | grep -q '"sell": {}'
 [ $? -eq 0 ] || echo "failed removing more quantity buy from sell order book"
 
 
@@ -75,7 +91,7 @@
 # buy at lower price than what the seller was asking
 ./add_sell.sh bbb uid 10 10 | grep -q 200
 [ $? -eq 0 ] || echo "failed sell add"
-./buy_order.sh bbb uid 5 5 | grep -q 404
+./buy_order.sh bbb uid 5 5 | grep -q 413
 [ $? -eq 0 ] || echo "failed with selling at lower price"
 ./dump_orderbook.sh  | grep -q '"quantity": 5'
 [ $? -eq 0 ] || echo "failed adding back to buy queue for remainder at lower price"
@@ -121,21 +137,3 @@
 [ $? -eq 0 ] || echo "failed to remove buy from middle of non-exact match sell"
 
 
-exit
-# make sure the orders are there
-./dump_orderbook.sh  | grep -q 200
-[ $? -eq 0 ] || echo "failed get order book"
-
-aaa=$(./dump_orderbook.sh  | grep 'aaa' | wc -l)
-[ ${aaa} -eq 2 ] || echo "didn't successfully add buy order"
-
-bbb=$(./dump_orderbook.sh  | grep 'bbb' | wc -l)
-[ ${bbb} -eq 2 ] || echo "didn't successfully add sell order"
-
-
-# add a second buy order and make sure there's two
-./add_buy.sh aaa uid 1 1 | grep -q 200
-[ $? -eq 0 ] || echo "failed 2nd buy add"
-
-aaa=$(./dump_orderbook.sh  | grep 'aaa' | wc -l)
-[ ${aaa} -eq 3 ] || echo "didn't successfully add buy order"

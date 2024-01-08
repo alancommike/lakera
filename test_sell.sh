@@ -6,7 +6,7 @@
 ./clear_orderbook.sh | grep -q 200
 [ $? -eq 0 ] || echo "failed to clear"
 
-# sell with empty book, should get a 404
+# sell with empty book, should get a 404 since stock doesn't exist
 ./sell_order.sh aaa uid 1 1 | grep -q 404
 [ $? -eq 0 ] || echo "failed with empty book"
 
@@ -17,6 +17,7 @@
 ./sell_order.sh ccc uid 1 1 | grep -q 404
 [ $? -eq 0 ] || echo "failed with selling non-match"
 
+
 ./clear_orderbook.sh | grep -q 200
 [ $? -eq 0 ] || echo "failed to clear"
 
@@ -25,8 +26,22 @@
 [ $? -eq 0 ] || echo "failed buy add"
 ./sell_order.sh bbb uid 1 1 | grep -q 200
 [ $? -eq 0 ] || echo "failed with selling exact match"
-./dump_orderbook.sh  | grep -q '"bbb": \[\]'
+./dump_orderbook.sh  | grep -q '"buy": {}'
 [ $? -eq 0 ] || echo "failed removing an exact match sell from buy queue"
+
+
+./clear_orderbook.sh | grep -q 200
+[ $? -eq 0 ] || echo "failed to clear"
+
+# sell when there's no buyer.
+./add_buy.sh bbb uid 1 1 | grep -q 200
+[ $? -eq 0 ] || echo "failed buy add"
+./sell_order.sh bbb uid 1 1 | grep -q 200
+[ $? -eq 0 ] || echo "failed with selling exact match"
+./sell_order.sh bbb uid 1 1 | grep -q 202
+[ $? -eq 0 ] || echo "failed selling without buyer"
+./dump_orderbook.sh  | grep -q '"sell": {'
+[ $? -eq 0 ] || echo "failed adding to buy queue when no seller"
 
 
 ./clear_orderbook.sh | grep -q 200
@@ -39,7 +54,7 @@
 [ $? -eq 0 ] || echo "failed buy add"
 ./sell_order.sh bbb uid 1 20 | grep -q 200
 [ $? -eq 0 ] || echo "failed with selling multi-exact match"
-./dump_orderbook.sh  | grep -q '"bbb": \[\]'
+./dump_orderbook.sh  | grep -q '"buy": {}'
 [ $? -eq 0 ] || echo "failed removing an multi-exact match sell from buy queue"
 
 
@@ -61,11 +76,11 @@
 # sell more quantity than what the buyer wanted
 ./add_buy.sh bbb uid 1 10 | grep -q 200
 [ $? -eq 0 ] || echo "failed buy add"
-./sell_order.sh bbb uid 1 17 | grep -q 404
+./sell_order.sh bbb uid 1 17 | grep -q 413
 [ $? -eq 0 ] || echo "failed with selling more quantity"
 ./dump_orderbook.sh  | grep -q '"quantity": 7'
 [ $? -eq 0 ] || echo "failed adding back to sell queue for remainder"
-./dump_orderbook.sh  | grep -q '"bbb": \[\]'
+./dump_orderbook.sh  | grep -q '"buy": {}'
 [ $? -eq 0 ] || echo "failed removing more quantity sell from buy order book"
 
 
@@ -89,7 +104,7 @@
 # sell at higher price than what the buyer was asking
 ./add_buy.sh bbb uid 10 10 | grep -q 200
 [ $? -eq 0 ] || echo "failed buy add"
-./sell_order.sh bbb uid 12 7 | grep -q 404
+./sell_order.sh bbb uid 12 7 | grep -q 413
 [ $? -eq 0 ] || echo "failed with selling at higher price"
 ./dump_orderbook.sh  | grep -q '"quantity": 7'
 [ $? -eq 0 ] || echo "failed adding to sell queue for higher price"
